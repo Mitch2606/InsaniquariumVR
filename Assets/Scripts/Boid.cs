@@ -28,8 +28,10 @@ public class Boid : MonoBehaviour
 
         int flockSize = 0;
         var flock = new List<(float sqrDist, Boid boid)>();
-        foreach(var b in mommy.bubbies) {
-            var bPosition = b.transform.position;
+        for(int i = 0; i < mommy.bubbies.Length; i++) {
+            var bPosition = mommy.bubbies[i].transform.position;
+            var bForward = mommy.bubbies[i].transform.forward;
+            
             var sqrDist = Vector3.SqrMagnitude(bPosition - thisPosition);
             if(sqrDist > flockSqr) {
                 continue;
@@ -38,7 +40,7 @@ public class Boid : MonoBehaviour
             flockSize++;
 
             centerOfMass += bPosition;
-            heading += b.transform.forward;
+            heading += bForward;
 
             // The boid is too close, we should try to avoid it.
             if(sqrDist < sepSqr) {
