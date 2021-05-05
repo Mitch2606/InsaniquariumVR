@@ -32,6 +32,9 @@ public class MommyBoid : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+#if UNITY_EDITOR
+    box.transform.localScale = new Vector3(10, box.transform.localScale.y, 10);
+#endif
     }
 
     Vector3 randomInBox(Bounds bounds)
@@ -45,9 +48,11 @@ public class MommyBoid : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+#if UNITY_ANDROID
         var playArea = OVRManager.boundary.GetDimensions(OVRBoundary.BoundaryType.PlayArea);
         box.transform.localScale = new Vector3(playArea.x, box.transform.localScale.y, playArea.z);
-        
+#endif
+
         var bounds = box.bounds;
         if (bubbies == null) {
             bubbies = new Boid[babyCount];
