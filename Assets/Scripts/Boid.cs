@@ -17,44 +17,37 @@ public class Boid : MonoBehaviour
     void Update()
     {
         var flockSqr = mommy.localFlockRadius * mommy.localFlockRadius;
+        var sepSqr = mommy.separationRadius * mommy.separationRadius;
 
+        var centerOfMass = Vector3.zero;
+        var heading = Vector3.zero;
+        var separation = Vector3.zero;
+
+        int flockSize = 0;
         var flock = new List<(float sqrDist, Boid boid)>();
         foreach(var b in mommy.bubbies) {
             var sqrDist = Vector3.SqrMagnitude(b.transform.position - this.transform.position);
-            if(sqrDist < flockSqr) {
-                flock.Add((sqrDist, b));
+            if(sqrDist > flockSqr) {
+                continue;
+            }
+            // The boid is within the local flock.
+            flockSize++;
+
+            centerOfMass += b.transform.position;
+            heading += b.transform.forward;
+
+            // The boid is too close, we should try to avoid it.
+            if(sqrDist < sepSqr) {
+                separation += this.transform.position - b.transform.position;
             }
         }
 
-        var sepSqr = mommy.separationRadius * mommy.separationRadius;
-        var separation = Vector3.zero;
-        for(int i = 0; i < flock.Count; i++) {
-            if(flock[i].sqrDist < sepSqr) {
-                separation += this.transform.position - flock[i].boid.transform.position;
-            }
-        }
-
-        var centerOfMass = Vector3.zero;
-        for(int i = 0; i < flock.Count; i++) {
-            centerOfMass += flock[i].boid.transform.position;
-        }
-        centerOfMass /= flock.Count;
-
+        // flockSize will always be > 0, as a boid will count itself as part of its flock.
+        centerOfMass /= flockSize;
+        heading /= flockSize;
 
         var toCenterOfMass = (centerOfMass - this.transform.position).normalized;
-        /*if(flock.Count > mommy.preferredFlockCount) {
-            toCenterOfMass = -toCenterOfMass;
-        }*/
-        toCenterOfMass *= (mommy.preferredFlockCount - flock.Count) / mommy.preferredFlockCount;
-
-        var heading = Vector3.zero;
-        for(int i = 0; i < flock.Count; i++) {
-            heading += flock[i].boid.transform.forward;
-        }
-        if(flock.Count > 0) {
-            heading /= flock.Count;
-        }
-
+        toCenterOfMass *= (mommy.preferredFlockCount - flockSize) / mommy.preferredFlockCount;
 
 
         var dir = transform.forward + toCenterOfMass + heading + separation;
