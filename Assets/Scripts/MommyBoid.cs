@@ -147,8 +147,8 @@ public class MommyBoid : MonoBehaviour
                         norm = hit2.normal;
                     }
 
-                    var factor = hit.distance / species.rayDistance;
-                    dir += hit.normal * dir.magnitude / factor;
+                    var distFactor = hit.distance / species.rayDistance;
+                    dir += hit.normal * dir.magnitude / distFactor * species.obstacleFactor;
                 }
 
                 dir = dir.normalized;

@@ -10,4 +10,5 @@ public class Species : ScriptableObject
     public float separationRadius = 1f;
     public float preferredFlockCount = 20;
     public float rayDistance = 2;
+    public float obstacleFactor = 1f;
 }
