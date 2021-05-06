@@ -163,25 +163,30 @@ public class MommyBoid : MonoBehaviour
                 //
                 // If it's outside of the bounding box, teleport it to a random other boid.
                 else {
-
-                    var newPos = oldBubbies[Random.Range(0, bubbies.Length)].pos;
-                    if(!box.bounds.Contains(newPos)) {
-                        // try again
-                        newPos = oldBubbies[Random.Range(0, bubbies.Length)].pos;
-                        
+                    const float TeleportDist = 1f;
+                    var closestPoint = box.bounds.ClosestPoint(thisPosition);
+                    var towardsBox = closestPoint - thisPosition;
+                    if(Vector3.SqrMagnitude(towardsBox) > TeleportDist * TeleportDist) {
+                        var newPos = oldBubbies[Random.Range(0, bubbies.Length)].pos;
                         if(!box.bounds.Contains(newPos)) {
-                            // try one more time.
+                            // If the new point is still out of bounds, try again
                             newPos = oldBubbies[Random.Range(0, bubbies.Length)].pos;
-
+                            
                             if(!box.bounds.Contains(newPos)) {
-                                // give up, and just teleport to a random point in the box.
+                                // If it's still out of bounds,
+                                // give up and just teleport to a random point in the box.
                                 newPos = randomInBox(box.bounds);
                             }
                         }
-                    }
 
-                    bubbies[i].pos = newPos;
-                    bubbies[i].forward = Random.onUnitSphere;
+                        Debug.Log("escapee!");
+
+                        bubbies[i].pos = newPos;
+                        bubbies[i].forward = Random.onUnitSphere;
+                    } else {
+                        bubbies[i].forward = Vector3.Slerp(thisForward, towardsBox.normalized, 0.1f);
+                        bubbies[i].pos = oldBubbies[i].pos + bubbies[i].forward * species.speed * Time.deltaTime;
+                    }
                 }
                 
                 bubbyObjs[i].transform.forward = bubbies[i].forward;
