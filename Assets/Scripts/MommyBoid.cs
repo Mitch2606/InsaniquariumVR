@@ -153,14 +153,34 @@ public class MommyBoid : MonoBehaviour
 
                 dir = dir.normalized;
 
-                if(!box.bounds.Contains(thisPosition)) {
-                    dir = box.bounds.center - thisPosition;
+                if(box.bounds.Contains(thisPosition)) {
+                    dir = Vector3.Slerp(thisForward, dir, 0.1f);
+
+                    bubbies[i].forward = dir;
+                    bubbies[i].pos = oldBubbies[i].pos + dir * species.speed * Time.deltaTime;
                 }
+                else {
 
-                dir = Vector3.Slerp(thisForward, dir, 0.1f);
+                    dir = box.bounds.center - thisPosition;
+                    var newPos = oldBubbies[Random.Range(0, bubbies.Length)].pos;
+                    if(!box.bounds.Contains(newPos)) {
+                        // try again
+                        newPos = oldBubbies[Random.Range(0, bubbies.Length)].pos;
+                        
+                        if(!box.bounds.Contains(newPos)) {
+                            // try one more time.
+                            newPos = oldBubbies[Random.Range(0, bubbies.Length)].pos;
 
-                bubbies[i].forward = dir;
-                bubbies[i].pos = oldBubbies[i].pos + dir * species.speed * Time.deltaTime;
+                            if(!box.bounds.Contains(newPos)) {
+                                // give up, and just teleport to a random point in the box.
+                                newPos = randomInBox(box.bounds);
+                            }
+                        }
+                    }
+
+                    bubbies[i].pos = newPos;
+                    bubbies[i].forward = Random.onUnitSphere;
+                }
                 
                 bubbyObjs[i].transform.forward = dir;
                 bubbyObjs[i].transform.position = bubbies[i].pos;
