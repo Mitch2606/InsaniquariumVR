@@ -4,6 +4,11 @@ using UnityEngine;
 
 public class MommyBoid : MonoBehaviour
 {
+    struct BoidInfo {
+        public Vector3 pos;
+        public Vector3 forward;
+    }
+
     public float speed = 10f;
 
     public float localFlockRadius = 5f;
@@ -14,24 +19,34 @@ public class MommyBoid : MonoBehaviour
 
     public float rayDistance = 2;
 
-    public Boid boidPrefab;
+    public GameObject boidPrefab;
 
     public uint babyCount = 15;
 
     public Collider box;
 
-    [System.NonSerialized]
-    public Boid[] bubbies;
-
-    [System.NonSerialized]
-    public Vector3 centerOfMass;
-
-    [System.NonSerialized]
-    public Vector3 averageHeading;
+    private BoidInfo[] bubbies;
+    private GameObject[] bubbyObjs;
 
     // Start is called before the first frame update
     void Start()
     {
+#if UNITY_EDITOR
+        box.transform.localScale = new Vector3(10, box.transform.localScale.y, 10);
+#endif
+
+        if (bubbies == null) {
+            bubbies = new BoidInfo[babyCount];
+            bubbyObjs = new GameObject[babyCount];
+            var bounds = box.bounds;
+            for(int i = 0; i < babyCount; i++) {
+                bubbies[i] = new BoidInfo {
+                    pos = randomInBox(bounds),
+                    forward = Random.onUnitSphere,
+                };
+                bubbyObjs[i] = Instantiate(boidPrefab);
+            }
+        }
     }
 
     Vector3 randomInBox(Bounds bounds)
@@ -45,49 +60,119 @@ public class MommyBoid : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+#if UNITY_ANDROID
         var playArea = OVRManager.boundary.GetDimensions(OVRBoundary.BoundaryType.PlayArea);
         box.transform.localScale = new Vector3(playArea.x, box.transform.localScale.y, playArea.z);
-        
-        var bounds = box.bounds;
-        if (bubbies == null) {
-            bubbies = new Boid[babyCount];
-            var mid = (float)babyCount / 2;
-            for(int i = 0; i < babyCount; i++) {
-                bubbies[i] = Instantiate(boidPrefab, randomInBox(bounds), Random.rotation, this.transform);
-            }
-        }
+#endif
 
+        // Handle dynamic resizing of baby count.
         if (bubbies.Length > babyCount) {
             var oldBubbies = bubbies;
-            bubbies = new Boid[babyCount];
+            var oldObjs = bubbyObjs;
+            bubbies = new BoidInfo[babyCount];
+            bubbyObjs = new GameObject[babyCount];
+
             for(uint i = 0; i < babyCount; i++) {
                 bubbies[i] = oldBubbies[i];
+                bubbyObjs[i] = oldObjs[i];
             }
             for(uint i = babyCount; i < oldBubbies.Length; i++) {
-                Destroy(oldBubbies[i].gameObject);
+                Destroy(oldObjs[i].gameObject);
             }
         }
 
         if(babyCount > bubbies.Length) {
-
             var oldBubbies = bubbies;
-            bubbies = new Boid[babyCount];
+            var oldObjs = bubbyObjs;
+            bubbies = new BoidInfo[babyCount];
+            bubbyObjs = new GameObject[babyCount];
             for(int i = 0; i < oldBubbies.Length; i++) {
                 bubbies[i] = oldBubbies[i];
+                bubbyObjs[i] = oldObjs[i];
             }
-            var mid = (float)babyCount / 2;
+            var bounds = box.bounds;
             for(int i = oldBubbies.Length; i < babyCount; i++) {
-                bubbies[i] = Instantiate(boidPrefab, randomInBox(bounds), Random.rotation, this.transform);
+                bubbies[i] = new BoidInfo {
+                    pos = randomInBox(bounds),
+                    forward = Random.onUnitSphere,
+                };
+                bubbyObjs[i] = Instantiate(boidPrefab);
             }
         }
 
-        var com = Vector3.zero;
-        var head = Vector3.zero;
-        foreach(var b in bubbies) {
-            com += b.transform.position;
-            head += b.transform.forward;
+        unsafe {
+            var oldBubbies = stackalloc BoidInfo[bubbies.Length];
+            for(int i = 0; i < bubbies.Length; i++) {
+                oldBubbies[i] = bubbies[i];
+            }
+            
+            var flockSqr = localFlockRadius * localFlockRadius;
+            var sepSqr = separationRadius * separationRadius;
+
+            for(int i = 0; i < bubbies.Length; i++) {
+
+                var thisPosition = oldBubbies[i].pos;
+                var thisForward = oldBubbies[i].forward;
+
+                var centerOfMass = Vector3.zero;
+                var heading = Vector3.zero;
+                var separation = Vector3.zero;
+                
+                int flockSize = 0;
+                for(int j = 0; j < bubbies.Length; j++) {
+                    var bPosition = oldBubbies[j].pos;
+                    var bForward = oldBubbies[j].forward;
+                    
+                    var sqrDist = Vector3.SqrMagnitude(bPosition - thisPosition);
+                    if(sqrDist > flockSqr) {
+                        continue;
+                    }
+                    // The boid is within the local flock.
+                    flockSize++;
+
+                    centerOfMass += bPosition;
+                    heading += bForward;
+
+                    // The boid is too close, we should try to avoid it.
+                    if(sqrDist < sepSqr) {
+                        separation += thisPosition - bPosition;
+                    }
+                }
+                
+                // flockSize will always be > 0, as a boid will count itself as part of its flock.
+                centerOfMass /= flockSize;
+                heading /= flockSize;
+
+                var toCenterOfMass = (centerOfMass - thisPosition).normalized;
+                toCenterOfMass *= (preferredFlockCount - flockSize) / preferredFlockCount;
+
+                var dir = thisForward + toCenterOfMass + heading + separation;
+                if(Physics.Raycast(new Ray(thisPosition, thisForward), out var hit, rayDistance)) {
+                    var norm = hit.normal;
+
+                    if(Physics.Raycast(hit.point, norm * rayDistance / 4, out var hit2)) {
+                        norm = Vector3.Slerp(norm, hit2.normal, 0.25f);
+                        norm = hit2.normal;
+                    }
+
+                    var factor = hit.distance / rayDistance;
+                    dir += hit.normal * dir.magnitude / factor;
+                }
+
+                dir = dir.normalized;
+
+                if(!box.bounds.Contains(thisPosition)) {
+                    dir = box.bounds.center - thisPosition;
+                }
+
+                dir = Vector3.Slerp(thisForward, dir, 0.1f);
+
+                bubbies[i].forward = dir;
+                bubbies[i].pos = oldBubbies[i].pos + dir * speed * Time.deltaTime;
+                
+                bubbyObjs[i].transform.forward = dir;
+                bubbyObjs[i].transform.position = bubbies[i].pos;
+            }
         }
-        this.centerOfMass = com / babyCount;
-        this.averageHeading = head / babyCount;
     }
 }

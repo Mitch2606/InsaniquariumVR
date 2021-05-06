@@ -49,7 +49,7 @@ MonoBehaviour:
   separationRadius: 1
   preferredFlockCount: 20
   rayDistance: 1
-  boidPrefab: {fileID: 3197024930587805203, guid: d64320c5df6572b4191d9fe221c7c880,
+  boidPrefab: {fileID: 3197024930587805213, guid: d64320c5df6572b4191d9fe221c7c880,
     type: 3}
   babyCount: 150
   box: {fileID: 3361952026172329729}
