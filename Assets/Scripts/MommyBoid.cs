@@ -105,63 +105,65 @@ public class MommyBoid : MonoBehaviour
 
                 var thisPosition = oldBubbies[i].pos;
                 var thisForward = oldBubbies[i].forward;
-
-                var centerOfMass = Vector3.zero;
-                var heading = Vector3.zero;
-                var separation = Vector3.zero;
-                
-                int flockSize = 0;
-                for(int j = 0; j < bubbies.Length; j++) {
-                    var bPosition = oldBubbies[j].pos;
-                    var bForward = oldBubbies[j].forward;
-                    
-                    var sqrDist = Vector3.SqrMagnitude(bPosition - thisPosition);
-                    if(sqrDist > flockSqr) {
-                        continue;
-                    }
-                    // The boid is within the local flock.
-                    flockSize++;
-
-                    centerOfMass += bPosition;
-                    heading += bForward;
-
-                    // The boid is too close, we should try to avoid it.
-                    if(sqrDist < sepSqr) {
-                        separation += thisPosition - bPosition;
-                    }
-                }
-                
-                // flockSize will always be > 0, as a boid will count itself as part of its flock.
-                centerOfMass /= flockSize;
-                heading /= flockSize;
-
-                var toCenterOfMass = (centerOfMass - thisPosition).normalized;
-                toCenterOfMass *= (species.preferredFlockCount - flockSize) / species.preferredFlockCount;
-
-                var dir = thisForward + toCenterOfMass + heading + separation;
-                if(Physics.Raycast(new Ray(thisPosition, thisForward), out var hit, species.rayDistance)) {
-                    var norm = hit.normal;
-
-                    if(Physics.Raycast(hit.point, norm * species.rayDistance / 4, out var hit2)) {
-                        norm = Vector3.Slerp(norm, hit2.normal, 0.25f);
-                        norm = hit2.normal;
-                    }
-
-                    var distFactor = hit.distance / species.rayDistance;
-                    dir += hit.normal * dir.magnitude / distFactor * species.obstacleFactor;
-                }
-
-                dir = dir.normalized;
-
+                //
+                // If it's within the bounding box, use normal rules.
                 if(box.bounds.Contains(thisPosition)) {
+
+                    var centerOfMass = Vector3.zero;
+                    var heading = Vector3.zero;
+                    var separation = Vector3.zero;
+                    
+                    int flockSize = 0;
+                    for(int j = 0; j < bubbies.Length; j++) {
+                        var bPosition = oldBubbies[j].pos;
+                        var bForward = oldBubbies[j].forward;
+                        
+                        var sqrDist = Vector3.SqrMagnitude(bPosition - thisPosition);
+                        if(sqrDist > flockSqr) {
+                            continue;
+                        }
+                        // The boid is within the local flock.
+                        flockSize++;
+
+                        centerOfMass += bPosition;
+                        heading += bForward;
+
+                        // The boid is too close, we should try to avoid it.
+                        if(sqrDist < sepSqr) {
+                            separation += thisPosition - bPosition;
+                        }
+                    }
+                    
+                    // flockSize will always be > 0, as a boid will count itself as part of its flock.
+                    centerOfMass /= flockSize;
+                    heading /= flockSize;
+
+                    var toCenterOfMass = (centerOfMass - thisPosition).normalized;
+                    toCenterOfMass *= (species.preferredFlockCount - flockSize) / species.preferredFlockCount;
+
+                    var dir = thisForward + toCenterOfMass + heading + separation;
+                    if(Physics.Raycast(new Ray(thisPosition, thisForward), out var hit, species.rayDistance)) {
+                        var norm = hit.normal;
+
+                        if(Physics.Raycast(hit.point, norm * species.rayDistance / 4, out var hit2)) {
+                            norm = Vector3.Slerp(norm, hit2.normal, 0.25f);
+                            norm = hit2.normal;
+                        }
+
+                        var distFactor = hit.distance / species.rayDistance;
+                        dir += hit.normal * dir.magnitude / distFactor * species.obstacleFactor;
+                    }
+
+                    dir = dir.normalized;
                     dir = Vector3.Slerp(thisForward, dir, 0.1f);
 
                     bubbies[i].forward = dir;
                     bubbies[i].pos = oldBubbies[i].pos + dir * species.speed * Time.deltaTime;
                 }
+                //
+                // If it's outside of the bounding box, teleport it to a random other boid.
                 else {
 
-                    dir = box.bounds.center - thisPosition;
                     var newPos = oldBubbies[Random.Range(0, bubbies.Length)].pos;
                     if(!box.bounds.Contains(newPos)) {
                         // try again
@@ -182,7 +184,7 @@ public class MommyBoid : MonoBehaviour
                     bubbies[i].forward = Random.onUnitSphere;
                 }
                 
-                bubbyObjs[i].transform.forward = dir;
+                bubbyObjs[i].transform.forward = bubbies[i].forward;
                 bubbyObjs[i].transform.position = bubbies[i].pos;
             }
         }
