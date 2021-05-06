@@ -9,15 +9,7 @@ public class MommyBoid : MonoBehaviour
         public Vector3 forward;
     }
 
-    public float speed = 10f;
-
-    public float localFlockRadius = 5f;
-
-    public float separationRadius = 1f;
-
-    public float preferredFlockCount = 20;
-
-    public float rayDistance = 2;
+    public Species species;
 
     public GameObject boidPrefab;
 
@@ -106,8 +98,8 @@ public class MommyBoid : MonoBehaviour
                 oldBubbies[i] = bubbies[i];
             }
             
-            var flockSqr = localFlockRadius * localFlockRadius;
-            var sepSqr = separationRadius * separationRadius;
+            var flockSqr = species.localFlockRadius * species.localFlockRadius;
+            var sepSqr = species.separationRadius * species.separationRadius;
 
             for(int i = 0; i < bubbies.Length; i++) {
 
@@ -144,18 +136,18 @@ public class MommyBoid : MonoBehaviour
                 heading /= flockSize;
 
                 var toCenterOfMass = (centerOfMass - thisPosition).normalized;
-                toCenterOfMass *= (preferredFlockCount - flockSize) / preferredFlockCount;
+                toCenterOfMass *= (species.preferredFlockCount - flockSize) / species.preferredFlockCount;
 
                 var dir = thisForward + toCenterOfMass + heading + separation;
-                if(Physics.Raycast(new Ray(thisPosition, thisForward), out var hit, rayDistance)) {
+                if(Physics.Raycast(new Ray(thisPosition, thisForward), out var hit, species.rayDistance)) {
                     var norm = hit.normal;
 
-                    if(Physics.Raycast(hit.point, norm * rayDistance / 4, out var hit2)) {
+                    if(Physics.Raycast(hit.point, norm * species.rayDistance / 4, out var hit2)) {
                         norm = Vector3.Slerp(norm, hit2.normal, 0.25f);
                         norm = hit2.normal;
                     }
 
-                    var factor = hit.distance / rayDistance;
+                    var factor = hit.distance / species.rayDistance;
                     dir += hit.normal * dir.magnitude / factor;
                 }
 
@@ -168,7 +160,7 @@ public class MommyBoid : MonoBehaviour
                 dir = Vector3.Slerp(thisForward, dir, 0.1f);
 
                 bubbies[i].forward = dir;
-                bubbies[i].pos = oldBubbies[i].pos + dir * speed * Time.deltaTime;
+                bubbies[i].pos = oldBubbies[i].pos + dir * species.speed * Time.deltaTime;
                 
                 bubbyObjs[i].transform.forward = dir;
                 bubbyObjs[i].transform.position = bubbies[i].pos;
