@@ -102,96 +102,101 @@ public class MommyBoid : MonoBehaviour
             var sepSqr = species.separationRadius * species.separationRadius;
 
             for(int i = 0; i < bubbies.Length; i++) {
-
-                var thisPosition = oldBubbies[i].pos;
-                var thisForward = oldBubbies[i].forward;
-                //
-                // If it's within the bounding box, use normal rules.
-                if(box.bounds.Contains(thisPosition)) {
-
-                    var centerOfMass = Vector3.zero;
-                    var heading = Vector3.zero;
-                    var separation = Vector3.zero;
-                    
-                    int flockSize = 0;
-                    for(int j = 0; j < bubbies.Length; j++) {
-                        var bPosition = oldBubbies[j].pos;
-                        var bForward = oldBubbies[j].forward;
-                        
-                        var sqrDist = Vector3.SqrMagnitude(bPosition - thisPosition);
-                        if(sqrDist > flockSqr) {
-                            continue;
-                        }
-                        // The boid is within the local flock.
-                        flockSize++;
-
-                        centerOfMass += bPosition;
-                        heading += bForward;
-
-                        // The boid is too close, we should try to avoid it.
-                        if(sqrDist < sepSqr) {
-                            separation += thisPosition - bPosition;
-                        }
-                    }
-                    
-                    // flockSize will always be > 0, as a boid will count itself as part of its flock.
-                    centerOfMass /= flockSize;
-                    heading /= flockSize;
-
-                    var toCenterOfMass = (centerOfMass - thisPosition).normalized;
-                    toCenterOfMass *= Mathf.Clamp(1 - flockSize / species.preferredFlockCount, -3, 1);
-                    toCenterOfMass *= species.flockFactor;
-
-                    var dir = thisForward + toCenterOfMass + heading + separation;
-                    if(Physics.Raycast(new Ray(thisPosition, thisForward), out var hit, species.rayDistance)) {
-                        var norm = hit.normal;
-
-                        if(Physics.Raycast(hit.point, norm * species.rayDistance / 4, out var hit2)) {
-                            norm = Vector3.Slerp(norm, hit2.normal, 0.25f);
-                            norm = hit2.normal;
-                        }
-
-                        var distFactor = hit.distance / species.rayDistance;
-                        dir += hit.normal * dir.magnitude / distFactor * species.obstacleFactor;
-                    }
-
-                    dir = dir.normalized;
-                    dir = Vector3.Slerp(thisForward, dir, 0.1f);
-
-                    bubbies[i].forward = dir;
-                    bubbies[i].pos = oldBubbies[i].pos + dir * species.speed * Time.deltaTime;
-                }
-                //
-                // If it's outside of the bounding box, teleport it to a random other boid.
-                else {
-                    const float TeleportDist = 1f;
-                    var closestPoint = box.bounds.ClosestPoint(thisPosition);
-                    var towardsBox = closestPoint - thisPosition;
-                    if(Vector3.SqrMagnitude(towardsBox) > TeleportDist * TeleportDist) {
-                        var newPos = oldBubbies[Random.Range(0, bubbies.Length)].pos;
-                        if(!box.bounds.Contains(newPos)) {
-                            // If the new point is still out of bounds, try again
-                            newPos = oldBubbies[Random.Range(0, bubbies.Length)].pos;
-                            
-                            if(!box.bounds.Contains(newPos)) {
-                                // If it's still out of bounds,
-                                // give up and just teleport to a random point in the box.
-                                newPos = randomInBox(box.bounds);
-                            }
-                        }
-
-                        Debug.Log("escapee!");
-
-                        bubbies[i].pos = newPos;
-                        bubbies[i].forward = Random.onUnitSphere;
-                    } else {
-                        bubbies[i].forward = Vector3.Slerp(thisForward, towardsBox.normalized, 0.1f);
-                        bubbies[i].pos = oldBubbies[i].pos + bubbies[i].forward * species.speed * Time.deltaTime;
-                    }
-                }
+                BoidStep(ref bubbies[i], oldBubbies, flockSqr, sepSqr);
                 
                 bubbyObjs[i].transform.forward = bubbies[i].forward;
                 bubbyObjs[i].transform.position = bubbies[i].pos;
+            }
+        }
+    }
+
+    unsafe void BoidStep(ref BoidInfo self, BoidInfo* bubbies, float flockSqr, float sepSqr) {
+        var babyCount = (int)this.babyCount;
+
+        var thisPosition = self.pos;
+        var thisForward = self.forward;
+        //
+        // If it's within the bounding box, use normal rules.
+        if(box.bounds.Contains(thisPosition)) {
+
+            var centerOfMass = Vector3.zero;
+            var heading = Vector3.zero;
+            var separation = Vector3.zero;
+                    
+            int flockSize = 0;
+            for(int j = 0; j < babyCount; j++) {
+                var bPosition = bubbies[j].pos;
+                
+                var awayFrom = thisPosition - bPosition;
+                var sqrDist = awayFrom.sqrMagnitude;
+                if(sqrDist > flockSqr) {
+                    continue;
+                }
+                // The boid is within the local flock.
+                flockSize++;
+
+                centerOfMass += bPosition;
+                heading += bubbies[j].forward;
+
+                // The boid is too close, we should try to avoid it.
+                if(sqrDist < sepSqr) {
+                    separation += awayFrom;
+                }
+            }
+                    
+            // flockSize will always be > 0, as a boid will count itself as part of its flock.
+            centerOfMass /= flockSize;
+            heading /= flockSize;
+
+            var toCenterOfMass = (centerOfMass - thisPosition).normalized;
+            toCenterOfMass *= Mathf.Clamp(1 - flockSize / species.preferredFlockCount, -3, 1);
+            toCenterOfMass *= species.flockFactor;
+
+            var dir = thisForward + toCenterOfMass + heading + separation;
+            if(Physics.Raycast(new Ray(thisPosition, thisForward), out var hit, species.rayDistance)) {
+                var norm = hit.normal;
+
+                if(Physics.Raycast(hit.point, norm * species.rayDistance / 4, out var hit2)) {
+                    norm = Vector3.Slerp(norm, hit2.normal, 0.25f);
+                    norm = hit2.normal;
+                }
+
+                var distFactor = hit.distance / species.rayDistance;
+                dir += hit.normal * dir.magnitude / distFactor * species.obstacleFactor;
+            }
+
+            dir = dir.normalized;
+            dir = Vector3.Slerp(thisForward, dir, 0.1f);
+
+            self.forward = dir;
+            self.pos += dir * species.speed * Time.deltaTime;
+        }
+        //
+        // If it's outside of the bounding box, teleport it to another random boid.
+        else {
+            const float TeleportDist = 1f;
+            var closestPoint = box.bounds.ClosestPoint(thisPosition);
+            var towardsBox = closestPoint - thisPosition;
+            if(Vector3.SqrMagnitude(towardsBox) > TeleportDist * TeleportDist) {
+                var newPos = bubbies[Random.Range(0, babyCount)].pos;
+                if(!box.bounds.Contains(newPos)) {
+                    // If the new point is still out of bounds, try again
+                    newPos = bubbies[Random.Range(0, babyCount)].pos;
+                            
+                    if(!box.bounds.Contains(newPos)) {
+                        // If it's still out of bounds,
+                        // give up and just teleport to a random point in the box.
+                        newPos = randomInBox(box.bounds);
+                    }
+                }
+
+                Debug.Log("escapee!");
+
+                self.pos = newPos;
+                self.forward = Random.onUnitSphere;
+            } else {
+                self.forward = Vector3.Slerp(thisForward, towardsBox.normalized, 0.1f);
+                self.pos += self.forward * species.speed * Time.deltaTime;
             }
         }
     }
