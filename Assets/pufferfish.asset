@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   speed: 10
   localFlockRadius: 3
+  flockFactor: 1
   separationRadius: 0.5
   preferredFlockCount: 40
   rayDistance: 2

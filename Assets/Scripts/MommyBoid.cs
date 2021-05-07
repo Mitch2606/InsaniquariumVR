@@ -139,7 +139,8 @@ public class MommyBoid : MonoBehaviour
                     heading /= flockSize;
 
                     var toCenterOfMass = (centerOfMass - thisPosition).normalized;
-                    toCenterOfMass *= (species.preferredFlockCount - flockSize) / species.preferredFlockCount;
+                    toCenterOfMass *= Mathf.Clamp(1 - flockSize / species.preferredFlockCount, -3, 1);
+                    toCenterOfMass *= species.flockFactor;
 
                     var dir = thisForward + toCenterOfMass + heading + separation;
                     if(Physics.Raycast(new Ray(thisPosition, thisForward), out var hit, species.rayDistance)) {
