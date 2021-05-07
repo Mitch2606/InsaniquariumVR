@@ -12,4 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d9e8f33d590b1ab46b384b46edd61317, type: 3}
   m_Name: pufferfish
   m_EditorClassIdentifier: 
-  speciesName: 
+  speed: 10
+  localFlockRadius: 3
+  separationRadius: 0.5
+  preferredFlockCount: 40
+  rayDistance: 2
+  obstacleFactor: 4
