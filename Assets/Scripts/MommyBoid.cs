@@ -144,6 +144,8 @@ public class MommyBoid : MonoBehaviour
                     separation += awayFrom;
                 }
             }
+            
+            separation = Vector3.ClampMagnitude(separation, species.maxSeparationAmt);
                     
             // flockSize will always be > 0, as a boid will count itself as part of its flock.
             centerOfMass /= flockSize;

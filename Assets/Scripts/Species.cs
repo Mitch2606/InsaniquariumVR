@@ -9,6 +9,7 @@ public class Species : ScriptableObject
     public float localFlockRadius = 5f;
     public float flockFactor = 1f;
     public float separationRadius = 1f;
+    public float maxSeparationAmt = 3f;
     public float preferredFlockCount = 20;
     public float rayDistance = 2;
     public float obstacleFactor = 1f;
