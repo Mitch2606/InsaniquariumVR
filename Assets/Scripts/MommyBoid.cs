@@ -13,6 +13,7 @@ public class MommyBoid : MonoBehaviour
 
     public GameObject boidPrefab;
 
+    [Range(1, 5000)]
     public uint babyCount = 15;
 
     public Collider box;
@@ -149,7 +150,7 @@ public class MommyBoid : MonoBehaviour
             heading /= flockSize;
 
             var toCenterOfMass = (centerOfMass - thisPosition).normalized;
-            toCenterOfMass *= Mathf.Clamp(1 - flockSize / species.preferredFlockCount, -3, 1);
+            toCenterOfMass *= Mathf.Clamp(1 - (float)flockSize / species.preferredFlockCount, -3, 1);
             toCenterOfMass *= species.flockFactor;
 
             var dir = thisForward + toCenterOfMass + heading + separation;
@@ -157,7 +158,6 @@ public class MommyBoid : MonoBehaviour
                 var norm = hit.normal;
 
                 if(Physics.Raycast(hit.point, norm * species.rayDistance / 4, out var hit2)) {
-                    norm = Vector3.Slerp(norm, hit2.normal, 0.25f);
                     norm = hit2.normal;
                 }
 
