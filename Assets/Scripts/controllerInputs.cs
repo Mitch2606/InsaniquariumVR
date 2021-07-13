@@ -4,12 +4,14 @@ using UnityEngine;
 
 public class controllerInputs : MonoBehaviour
 {
-    public int controllerIn;
+    public static int controllerIn;
+    public TextMesh debugDisplayInGameTextBox;
 
     // Start is called before the first frame update
     void Start()
     {
         controllerIn = 0;
+        debugDisplayInGameTextBox = GetComponentsInChildren<TextMesh>()[0];
     }
 
     // Update is called once per frame
@@ -18,13 +20,13 @@ public class controllerInputs : MonoBehaviour
         OVRInput.Update();
 
         //Pressing A button turns player passive
-        if ((OVRInput.GetDown(OVRInput.RawButton.A)) || (OVRInput.GetDown(OVRInput.RawButton.X)))
+        if ((OVRInput.Get(OVRInput.RawButton.A)) || (OVRInput.GetDown(OVRInput.RawButton.X)))
         {
             controllerIn &= ~1;
         }
 
         //Pressing B button turns player hostile
-        if ((OVRInput.GetDown(OVRInput.RawButton.B)) || (OVRInput.GetDown(OVRInput.RawButton.Y)))
+        if ((OVRInput.Get(OVRInput.RawButton.B)) || (OVRInput.GetDown(OVRInput.RawButton.Y)))
         {
             controllerIn |= 1;
         }
@@ -68,12 +70,19 @@ public class controllerInputs : MonoBehaviour
         {
             controllerIn &= ~16;
         }
+
+        debugDisplayInGameTextBox.text = controllerIn.ToString();
     }
 
     void FixedUpdate()
     {
         OVRInput.FixedUpdate();
 
+    }
+
+     public static int getStateOfController()
+    {
+        return controllerIn;
     }
 
 }
